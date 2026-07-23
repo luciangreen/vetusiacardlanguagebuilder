@@ -92,22 +92,24 @@ list_tools> quit
 The chat commands let you drive the algorithm with plain English:
 
 ```
-list_tools> chat preview "sort 8 2 5 1 but below 3"
+list_tools> chat preview "sort 8 2 5 1 minimum 3"
 set_input(numbers,[8,2,5,1])
 set_input(minimum,3)
 run_algorithm
 show_result
 
-list_tools> chat explain "sort 8 2 5 1 but below 3"
+list_tools> chat explain "sort 8 2 5 1 minimum 3"
 Translated commands:
 set_input(numbers,[8,2,5,1])
-...
+set_input(minimum,3)
+run_algorithm
+show_result
 
-list_tools> chat run "sort 8 2 5 1 but below 3"
-result(ok,[])
-result(ok,[])
-result(ok,[1,2])
-result(ok,[1,2])
+list_tools> chat run "sort 8 2 5 1 minimum 3"
+result(ok,input_set(numbers,[8,2,5,1]))
+result(ok,input_set(minimum,3))
+result(ok,[5,8])
+result(ok,[5,8])
 ```
 
 ## Programmatic API
