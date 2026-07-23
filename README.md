@@ -54,10 +54,10 @@ list_tools> set minimum 3
 result(ok, input_set(minimum,3))
 
 list_tools> prepare numbers
-result(ok,[3,5,8])
+result(ok,[5,8])
 
 list_tools> show result
-result(ok,[3,5,8])
+result(ok,[5,8])
 
 list_tools> commands
 load numbers <list>
@@ -129,7 +129,7 @@ result(ok,[5,8])
    run_language_command(list_tools, S1,   "set minimum 3",          S2, _),
    run_language_command(list_tools, S2,   "prepare numbers",        _,  R),
    writeln(R).
-% result(ok,[3,5,8])
+% result(ok,[5,8])
 
 % Get the list of generated commands
 ?- language_commands(list_tools, Commands),
