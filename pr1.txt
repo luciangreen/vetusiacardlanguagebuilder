@@ -1,0 +1,636 @@
+GitHub Copilot Prolog Agent Program Requirements
+
+Algorithm Language Builder (SWI-Prolog)
+
+Version: 1.0
+
+⸻
+
+Objective
+
+Implement an SWI-Prolog module that converts a Prolog algorithm into a small, documented programming language with an integrated conversational interface.
+
+The emphasis is clarity, simplicity, maintainability, and extensibility, not AI complexity.
+
+The generated language should feel similar to a domain-specific language (DSL) while remaining completely derived from the supplied Prolog algorithm.
+
+⸻
+
+Primary Goals
+
+The system shall:
+
+* accept an ordinary Prolog algorithm;
+* analyse its interface;
+* generate an intuitive command language;
+* automatically document every command;
+* generate a command parser;
+* generate a runtime;
+* provide a REPL;
+* provide a chat interface that converts natural language into commands;
+* generate tests;
+* remain deterministic wherever practical.
+
+⸻
+
+Overall Architecture
+
+                Prolog Algorithm
+                       │
+             Interface Analysis
+                       │
+        Command Model Construction
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+Documentation Generator        Parser Generator
+        │                             │
+        └──────────────┬──────────────┘
+                       │
+             Runtime Generator
+                       │
+            Chat Translation Layer
+                       │
+                    REPL
+
+Every stage must be an independent module.
+
+No module should contain unrelated responsibilities.
+
+⸻
+
+Project Structure
+
+algorithm_language/
+    algorithm_language.pl
+    analyse.pl
+    command_model.pl
+    parser_builder.pl
+    runtime_builder.pl
+    documentation_builder.pl
+    chat_builder.pl
+    repl.pl
+    validator.pl
+    executor.pl
+    state.pl
+    generators/
+        docs.pl
+        parser.pl
+        runtime.pl
+        tests.pl
+    examples/
+    tests/
+    docs/
+
+Keep modules small.
+
+Avoid “god modules.”
+
+⸻
+
+Public API
+
+The following predicates must be implemented.
+
+algorithm_language/2
+algorithm_language/3
+build_language/1
+build_language/2
+language_repl/1
+run_language_command/5
+parse_language_command/3
+validate_language_command/3
+execute_language_command/5
+language_documentation/2
+language_commands/2
+chat_to_commands/4
+explain_language_command/3
+save_language/2
+load_language/2
+
+Public predicates must be documented using PlDoc.
+
+⸻
+
+Main Entry Point
+
+:- algorithm_language(
+        Language,
+        Algorithm,
+        Options).
+
+Example
+
+:- algorithm_language(
+        calculator,
+        calculate(Input,Output),
+        [
+            description("Simple calculator"),
+            chat(true)
+        ]).
+
+A shorter form
+
+:- algorithm_language(Language,Algorithm).
+
+must also exist.
+
+⸻
+
+Algorithm Analysis
+
+The analyser shall inspect
+
+* exported predicate
+* predicate name
+* arity
+* modes
+* argument names
+* comments
+* optional type declarations
+* called predicates
+* deterministic behaviour
+* semideterministic behaviour
+* outputs
+* failures
+
+The analyser should never attempt complicated theorem proving.
+
+Simple structural analysis is preferred.
+
+⸻
+
+Command Generation
+
+Generate commands directly from the algorithm.
+
+Example
+
+calculate(Input,Output)
+
+may generate
+
+load input
+run
+show result
+reset
+
+Another algorithm
+
+prepare_numbers(Input,Minimum,Output)
+
+may generate
+
+load numbers
+set minimum
+prepare numbers
+show result
+
+Generated commands should
+
+* be readable
+* contain verbs
+* avoid abbreviations
+* avoid Prolog syntax
+* avoid punctuation where possible
+
+⸻
+
+Command Model
+
+Represent commands internally.
+
+Example
+
+command(load_numbers(List))
+command(set_minimum(5))
+command(run_algorithm)
+command(show_result)
+
+Every module uses this representation.
+
+No module parses text independently.
+
+⸻
+
+Parser
+
+Generate DCGs.
+
+Example
+
+command(load_numbers(List)) -->
+    [load,numbers],
+    list(List).
+
+The parser must support
+
+* numbers
+* atoms
+* strings
+* lists
+* quoted text
+
+Reject malformed commands with useful errors.
+
+⸻
+
+Runtime
+
+The runtime shall execute commands through explicit state.
+
+language_state(
+    Inputs,
+    Settings,
+    Variables,
+    Results,
+    History
+).
+
+Avoid hidden global state.
+
+⸻
+
+Documentation Generation
+
+Automatically generate Markdown documentation.
+
+Every command receives
+
+* purpose
+* syntax
+* arguments
+* example
+* effect
+* related commands
+
+Example
+
+Command
+set minimum Number
+Purpose
+Sets the minimum accepted value.
+Example
+set minimum 5
+Related
+prepare numbers
+show result
+
+Documentation should be regenerated whenever the language changes.
+
+⸻
+
+Chat Interface
+
+Generate
+
+chat preview
+chat explain
+chat run
+
+Example
+
+chat preview
+"Load 4 7 9,
+remove values below 5,
+sort,
+show result."
+
+↓
+
+load numbers [4,7,9]
+set minimum 5
+prepare numbers
+show result
+
+The user must always see generated commands before execution unless run mode is explicitly selected.
+
+⸻
+
+Chat Safety
+
+The chat layer may only emit valid generated commands.
+
+Never execute arbitrary Prolog.
+
+Never produce
+
+call/1
+consult/1
+assertz/1
+retract/1
+shell/1
+
+unless intentionally exposed.
+
+All commands must pass through validation.
+
+⸻
+
+Validation
+
+Validate
+
+* required inputs
+* command order
+* argument types
+* required settings
+* duplicates
+* illegal values
+* unavailable commands
+
+Example
+
+Cannot execute
+prepare numbers
+Reason
+Input numbers have not been loaded.
+Suggestion
+load numbers [...]
+
+⸻
+
+REPL
+
+Implement
+
+?- language_repl(Language).
+
+Example
+
+calculator>
+load numbers [3,8,2]
+Minimum set.
+prepare numbers
+show result
+[3,8]
+
+Support
+
+help
+commands
+history
+clear
+reset
+quit
+
+⸻
+
+Help System
+
+help
+help command
+commands
+documentation
+
+must all work.
+
+⸻
+
+Generated Files
+
+Generate
+
+language.pl
+commands.pl
+runtime.pl
+parser.pl
+docs.md
+examples.md
+tests.pl
+
+A single-file mode should also exist.
+
+⸻
+
+Options
+
+Support
+
+description(Text)
+chat(true)
+generate_docs(true)
+generate_tests(true)
+single_file(false)
+command_style(simple)
+safe_mode(true)
+debug(false)
+
+Unknown options should produce informative warnings.
+
+⸻
+
+State Management
+
+Implement pure state threading.
+
+Avoid mutable global variables.
+
+REPL may internally maintain state.
+
+Runtime should remain callable independently.
+
+⸻
+
+Error Reporting
+
+Errors should explain
+
+* what happened
+* why
+* suggested fix
+
+Avoid stack traces unless debug mode is enabled.
+
+⸻
+
+Testing
+
+Generate tests automatically.
+
+Every language should receive
+
+* parser tests
+* validator tests
+* runtime tests
+* documentation generation tests
+* chat translation tests
+* integration tests
+
+GitHub Copilot should expand these as features grow.
+
+⸻
+
+Performance
+
+Prefer
+
+* deterministic predicates
+* tail recursion
+* explicit recursion
+* difference lists
+* indexed lookups
+
+Avoid
+
+* unnecessary append/3
+* unnecessary findall/3
+* repeated parsing
+* duplicated documentation generation
+
+⸻
+
+Coding Style
+
+Use
+
+* meaningful predicate names
+* PlDoc
+* one responsibility per module
+* explicit interfaces
+* deterministic predicates where possible
+
+Avoid
+
+* duplicated logic
+* deep nesting
+* giant predicates
+* hidden side effects
+
+⸻
+
+GitHub Copilot Workflow
+
+For every implementation stage:
+
+1. Implement the smallest complete feature.
+2. Run tests.
+3. Fix warnings.
+4. Refactor only when behaviour is preserved.
+5. Update documentation.
+6. Add examples.
+7. Commit only after tests pass.
+
+Never leave partially implemented public predicates.
+
+⸻
+
+Development Order
+
+Implement in this order.
+
+Stage 1
+
+Project skeleton.
+
+⸻
+
+Stage 2
+
+Algorithm analyser.
+
+⸻
+
+Stage 3
+
+Command model.
+
+⸻
+
+Stage 4
+
+Parser generator.
+
+⸻
+
+Stage 5
+
+Runtime.
+
+⸻
+
+Stage 6
+
+Validator.
+
+⸻
+
+Stage 7
+
+Documentation generator.
+
+⸻
+
+Stage 8
+
+REPL.
+
+⸻
+
+Stage 9
+
+Chat translation.
+
+⸻
+
+Stage 10
+
+Automatic tests.
+
+⸻
+
+Stage 11
+
+Generated files.
+
+⸻
+
+Stage 12
+
+Examples.
+
+⸻
+
+Stage 13
+
+Optimisation.
+
+⸻
+
+Acceptance Criteria
+
+The following should work.
+
+:- algorithm_language(
+    list_tools,
+    prepare_numbers(Input,Minimum,Output),
+    [chat(true)]).
+
+The generated language should support
+
+help
+commands
+load numbers [8,2,5,1]
+set minimum 3
+prepare numbers
+show result
+chat preview
+"Sort 8,2,5,1 but remove numbers below 3."
+chat explain
+"..."
+chat run
+"..."
+
+Documentation should be generated automatically.
+
+Parser should be generated automatically.
+
+Tests should be generated automatically.
+
+The REPL should work immediately.
+
+The chat interface should translate plain English into valid language commands.
+
+The architecture should remain modular so future projects—including VetusiaCard, HyperCard-inspired environments, Spec-to-Algorithm, Starlog, Detlog, Piglog, and other visual or conversational programming systems—can reuse the same language-generation engine with minimal changes.
+
+This specification is intentionally scoped as a practical Version 1. It provides a clean foundation that GitHub Copilot Agent can implement incrementally while remaining extensible for future visual language builders such as VetusiaCard.
