@@ -25,6 +25,7 @@ command_spec_by_id(Language, Id, Spec) :-
 build_command_from_id(load_input(Name), [Value], set_input(Name, Value)).
 build_command_from_id(set_input(Name), [Value], set_input(Name, Value)).
 build_command_from_id(run_algorithm, [], run_algorithm).
+build_command_from_id(run_arg(Name), [Value], run_arg(Name, Value)).
 build_command_from_id(show_result, [], show_result).
 build_command_from_id(reset, [], reset).
 build_command_from_id(clear, [], clear).
@@ -41,6 +42,7 @@ command_id(set_input(Name, _), set_input(Name)) :-
     !.
 command_id(set_input(Name, _), load_input(Name)).
 command_id(run_algorithm, run_algorithm).
+command_id(run_arg(Name, _), run_arg(Name)).
 command_id(show_result, show_result).
 command_id(reset, reset).
 command_id(clear, clear).
@@ -62,6 +64,9 @@ render_command(set_input(Name, Value), Text) :-
     append([Verb|Words], [ValueText], Tokens),
     atomic_list_concat(Tokens, ' ', Text).
 render_command(run_algorithm, "run").
+render_command(run_arg(Name, Value), Text) :-
+    value_text(Value, ValueText),
+    format(atom(Text), 'run ~w ~w', [Name, ValueText]).
 render_command(show_result, "show result").
 render_command(reset, "reset").
 render_command(clear, "clear").
@@ -101,7 +106,7 @@ action_command_specs(Analysis, Specs) :-
     PredWords = Analysis.predicate_words,
     atomic_list_concat(PredWords, ' ', ActionSyntax),
     format(atom(ActionPurpose), 'Runs ~w.', [Analysis.predicate]),
-    Specs = [
+    RunAlgSpecs = [
         command_spec{
             id: run_algorithm,
             syntax: "run",
@@ -120,7 +125,33 @@ action_command_specs(Analysis, Specs) :-
             effect: "Executes the algorithm.",
             related: [show_result]
         }
-    ].
+    ],
+    run_arg_specs(Analysis.input_args, RunArgSpecs),
+    append(RunAlgSpecs, RunArgSpecs, Specs).
+
+run_arg_specs([], []).
+run_arg_specs([ArgName|Rest], Specs) :-
+    ( generic_arg_name(ArgName) ->
+        format(atom(Syntax), 'run ~w <value>', [ArgName]),
+        format(atom(Purpose), 'Sets ~w and runs algorithm.', [ArgName]),
+        Spec = command_spec{
+            id: run_arg(ArgName),
+            syntax: Syntax,
+            words: [run, ArgName],
+            arg_types: [value],
+            purpose: Purpose,
+            effect: "Sets input and executes the algorithm.",
+            related: [run_algorithm, show_result]
+        },
+        Specs = [Spec|RestSpecs]
+    ;
+        Specs = RestSpecs
+    ),
+    run_arg_specs(Rest, RestSpecs).
+
+generic_arg_name(ArgName) :-
+    atom_concat(arg, NumAtom, ArgName),
+    atom_number(NumAtom, _).
 
 core_command_specs([
     command_spec{id:show_result, syntax:"show result", words:[show,result], arg_types:[], purpose:"Displays the latest result.", effect:"No state change.", related:[run_algorithm]},
