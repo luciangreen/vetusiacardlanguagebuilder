@@ -198,6 +198,51 @@ cd algorithm_language/examples
 swipl -g "consult(list_tools_example), run_example, halt" -t halt
 ```
 
+# Mac, Linux and Windows (with Linux commands installed): Prepare to run load
+
+* In Terminal settings (Mac), make Bash the default shell:
+
+```
+/bin/bash
+```
+
+* In Terminal, edit the text file `~/.bashrc` using the text editor Nano:
+
+```
+nano ~/.bashrc
+```
+
+* Add the following to the file `~/.bashrc`:
+
+```
+export PATH="$PATH:/opt/homebrew/bin:/Users/username"
+```
+* or location of load.sh
+
+* Check if `usr/local/bin` exists
+
+```
+ls -ld /usr/local/bin
+```
+
+* Create the directory if missing
+
+```
+sudo mkdir -p /usr/local/bin
+```
+
+* Link to load in Terminal
+
+```
+sudo ln -sf /Users/username/load.sh /usr/local/bin/load
+```
+
+# Caveats
+* Copy load.sh to the location to run it `cp load.sh /Users/username/load.sh`
+* Make load.sh executable `chmod +x /Users/username/load.sh`
+* Make bash the default shell `chsh -s /bin/bash`
+* Run load `load`
+
 ## License
 
 See [LICENSE](LICENSE).
