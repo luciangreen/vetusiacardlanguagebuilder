@@ -25,6 +25,7 @@ analyse_algorithm(Algorithm, Options, Analysis) :-
         description: Description
     }.
 
+argument_names(1, [arg1]) :- !.
 argument_names(2, [input, output]) :- !.
 argument_names(3, [input, minimum, output]) :- !.
 argument_names(Arity, Names) :-
@@ -39,6 +40,7 @@ argument_names(Arity, Names) :-
         Names
     ).
 
+split_input_output([arg1], [arg1], none) :- !.
 split_input_output([Only], [], Only) :- !.
 split_input_output(ArgNames, InputArgs, OutputArg) :-
     append(InputArgs, [OutputArg], ArgNames).

@@ -37,6 +37,10 @@ execute_language_command(_, State0, history, State, result(ok, History)) :-
     State0 = language_state(_, _, _, _, History),
     State = State0.
 execute_language_command(_, State0, quit, State0, result(ok, quit)).
+execute_language_command(Language, State0, run_arg(Name, Value), State, result(ok, ResultValue)) :-
+    state_set_input(State0, Name, Value, State1),
+    run_algorithm(Language, State1, State2, ResultValue),
+    state_append_history(State2, run_arg(Name, Value), State).
 execute_language_command(_, State0, Command, State0, result(error, Message)) :-
     format(atom(Message), 'Unsupported command: ~w', [Command]).
 
@@ -54,7 +58,10 @@ callable_algorithm(Language, Algorithm, Analysis, State, Output) :-
     bind_algorithm_inputs(Goal, Analysis, State),
     ( get_dict(module, Language, Module) -> true ; Module = user ),
     call(Module:Goal),
-    output_arg_value(Goal, Analysis.output_arg, Analysis.argument_names, Output).
+    ( Analysis.output_arg = none ->
+        Output = ok
+    ; output_arg_value(Goal, Analysis.output_arg, Analysis.argument_names, Output)
+    ).
 
 bind_algorithm_inputs(Goal, Analysis, State) :-
     bind_named_inputs(Analysis.input_args, Goal, Analysis.argument_names, State).
