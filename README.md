@@ -243,6 +243,8 @@ sudo ln -sf /Users/username/load.sh /usr/local/bin/load
 * Make bash the default shell `chsh -s /bin/bash`
 * Run load `load`
 
+* VCLB only works with lists, so it should be modified before being used as a launcher.
+
 ## License
 
 See [LICENSE](LICENSE).
