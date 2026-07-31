@@ -58,10 +58,15 @@ algorithm_language(LanguageName, Algorithm, Options) :-
     resolve_algorithm(Module, PlainAlgorithm, NormalizedOptions, ResolvedAlgorithm),
     algorithm_language_analyse:analyse_algorithm(ResolvedAlgorithm, NormalizedOptions, Analysis),
     algorithm_language_command_model:build_command_model(Analysis, NormalizedOptions, Commands),
+    ( atom(PlainAlgorithm), current_module(PlainAlgorithm) ->
+        EffectiveModule = PlainAlgorithm
+    ;
+        EffectiveModule = Module
+    ),
     Language = language{
         name: LanguageName,
         algorithm: ResolvedAlgorithm,
-        module: Module,
+        module: EffectiveModule,
         options: NormalizedOptions,
         analysis: Analysis,
         commands: Commands

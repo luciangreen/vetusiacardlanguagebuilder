@@ -80,6 +80,12 @@ test(single_arg_load_accepts_nested_lists, [nondet]) :-
     algorithm_language:run_language_command(lucianpl, State0, "load arg1 [[[n,a],[1]]]", State1, result(ok, _)),
     state_get_input(State1, arg1, [[[n,a],[1]]]).
 
+test(run_single_arg_language_after_load, [nondet]) :-
+    setup_single_arg_language,
+    initial_language_state(State0),
+    algorithm_language:run_language_command(lucianpl, State0, "load arg1 [[[n,a],[1]]]", State1, result(ok, _)),
+    algorithm_language:run_language_command(lucianpl, State1, "run", _State2, result(ok, ok)).
+
 test(repl_rejects_unknown_single_arg_load_without_crashing, [nondet]) :-
     setup_single_arg_language,
     algorithm_language:stored_language(lucianpl, Language),
