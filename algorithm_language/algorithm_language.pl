@@ -49,14 +49,18 @@ algorithm_language(LanguageName, Algorithm) :-
 %% algorithm_language(+LanguageName, +Algorithm, +Options) is det.
 %
 %  Creates and stores a generated language with options.
+%  When Algorithm is an atom that names a loaded Prolog module, all
+%  exported predicates from that module are ranked and listed so the
+%  user can choose one interactively.
 algorithm_language(LanguageName, Algorithm, Options) :-
     strip_module(Algorithm, Module, PlainAlgorithm),
     normalize_options(Options, NormalizedOptions),
-    algorithm_language_analyse:analyse_algorithm(PlainAlgorithm, NormalizedOptions, Analysis),
+    resolve_algorithm(Module, PlainAlgorithm, NormalizedOptions, ResolvedAlgorithm),
+    algorithm_language_analyse:analyse_algorithm(ResolvedAlgorithm, NormalizedOptions, Analysis),
     algorithm_language_command_model:build_command_model(Analysis, NormalizedOptions, Commands),
     Language = language{
         name: LanguageName,
-        algorithm: PlainAlgorithm,
+        algorithm: ResolvedAlgorithm,
         module: Module,
         options: NormalizedOptions,
         analysis: Analysis,
@@ -188,6 +192,22 @@ resolve_language(Name, Language) :-
     !.
 resolve_language(Name, _) :-
     throw(error(existence_error(language, Name), _)).
+
+%% resolve_algorithm(+Module, +PlainAlgorithm, +Options, -Algorithm) is det.
+%
+%  When PlainAlgorithm is a compound callable term it is used directly.
+%  When PlainAlgorithm is an atom that names a loaded Prolog module, the
+%  user is presented with a ranked list of that module's exported
+%  predicates and may choose one interactively.
+resolve_algorithm(_Module, PlainAlgorithm, _Options, PlainAlgorithm) :-
+    compound(PlainAlgorithm),
+    !.
+resolve_algorithm(_Module, PlainAlgorithm, Options, Algorithm) :-
+    atom(PlainAlgorithm),
+    current_module(PlainAlgorithm),
+    !,
+    algorithm_language_analyse:select_algorithm_from_module(PlainAlgorithm, Options, Algorithm).
+resolve_algorithm(_Module, PlainAlgorithm, _Options, PlainAlgorithm).
 
 normalize_options(Options, Normalized) :-
     defaults(DefaultOptions),
