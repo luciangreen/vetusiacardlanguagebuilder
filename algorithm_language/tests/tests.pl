@@ -2,6 +2,7 @@
 
 :- use_module('../algorithm_language').
 :- use_module('../state').
+:- use_module('../repl').
 
 prepare_numbers(Input, Minimum, Output) :-
     include(at_least(Minimum), Input, Filtered),
@@ -9,6 +10,9 @@ prepare_numbers(Input, Minimum, Output) :-
 
 at_least(Minimum, Value) :-
     Value >= Minimum.
+
+crash_algorithm(_Input, _Output) :-
+    throw(error(simulated_runtime_failure, context(crash_algorithm/2, "simulated"))).
 
 setup_language :-
     algorithm_language:algorithm_language(
@@ -49,5 +53,17 @@ test(generation_outputs, [nondet]) :-
     exists_file('algorithm_language/docs/parser.pl'),
     exists_file('algorithm_language/docs/runtime.pl'),
     exists_file('algorithm_language/docs/tests.pl').
+
+test(repl_handles_execution_errors, [nondet]) :-
+    algorithm_language:algorithm_language(
+        crash_tools,
+        plunit_algorithm_language:crash_algorithm(_, _),
+        [description("Crash test language")]
+    ),
+    algorithm_language:stored_language(crash_tools, Language),
+    initial_language_state(State0),
+    algorithm_language_repl:handle_input(Language, State0, "load input [1]", State1, true),
+    algorithm_language_repl:handle_input(Language, State1, "run", State2, true),
+    assertion(State2 == State1).
 
 :- end_tests(algorithm_language).
