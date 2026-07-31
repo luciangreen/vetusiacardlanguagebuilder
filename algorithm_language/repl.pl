@@ -18,7 +18,7 @@ repl_loop(Language, State0) :-
     ( Input == end_of_file ->
         true
     ; normalize_space(string(Trimmed), Input),
-      handle_input(Language, State0, Trimmed, State, Continue),
+      (handle_input(Language, State0, Trimmed, State, Continue)->true;Continue=true),
       ( Continue == true ->
           repl_loop(Language, State)
       ; true
@@ -29,7 +29,7 @@ handle_input(_, State, "", State, true) :- !.
 handle_input(_, State, "quit", State, false) :- !.
 handle_input(Language, State0, Input, State, true) :-
     ( parse_language_command(Language, Input, Parsed) ->
-        execute_parsed(Language, State0, Parsed, State)
+        catch(execute_parsed(Language, State0, Parsed, State),_,fail)
     ; format('Parse error: ~w~n', [Input]),
       State = State0
     ).

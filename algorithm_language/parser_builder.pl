@@ -9,7 +9,8 @@ parse_language_command(Language, Text, Command) :-
     tokenize_command(Text, Tokens),
     ( parse_with_specs(Language.commands, Tokens, Command) ->
         true
-    ; throw(error(language_parse_error(Text, "Unknown or malformed command"), _))
+    %; throw(error(language_parse_error(Text, "Unknown or malformed command"), _))
+    ; print_message(information,[Text, "Unknown or malformed command"])
     ).
 
 parse_with_specs([Spec|_], Tokens, Command) :-
