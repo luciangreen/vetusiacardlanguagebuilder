@@ -2,7 +2,6 @@
 
 :- use_module('../algorithm_language').
 :- use_module('../state').
-:- use_module('../repl').
 
 accept_input(_Input).
 

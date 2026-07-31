@@ -92,7 +92,7 @@ balanced_bracket_token_rest(Depth, [Char|Rest]) -->
         NextDepth >= 0
     },
     (   { NextDepth =:= 0 } ->
-        []
+        { Rest = [] }
     ;   balanced_bracket_token_rest(NextDepth, Rest)
     ).
 
