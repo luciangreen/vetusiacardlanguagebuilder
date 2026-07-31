@@ -717,30 +717,7 @@ initialise_extra_arguments([_|Rest]) :-
    Report
    ------------------------------------------------------------------ */
 
-print_dependency_report(Graph, Recommendations) :-
-    format('~nPredicate dependency scan~n', []),
-    format('=========================~n', []),
-
-    forall(
-        member(
-            predicate(
-                PredicateIndicator,
-                Calls,
-                CalledBy,
-                ClauseCount,
-                Score
-            ),
-            Graph
-        ),
-        (
-            format('~n~q~n', [PredicateIndicator]),
-            format('  clauses: ~d~n', [ClauseCount]),
-            format('  calls: ~q~n', [Calls]),
-            format('  called by: ~q~n', [CalledBy]),
-            format('  score: ~d~n', [Score])
-        )
-    ),
-
+print_dependency_report(_Graph, Recommendations) :-
     format('~nRecommended top predicates:~n', []),
     print_recommendations(Recommendations, 1),
     nl.
