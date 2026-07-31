@@ -9,8 +9,7 @@ parse_language_command(Language, Text, Command) :-
     tokenize_command(Text, Tokens),
     ( parse_with_specs(Language.commands, Tokens, Command) ->
         true
-    %; throw(error(language_parse_error(Text, "Unknown or malformed command"), _))
-    ; print_message(information,[Text, "Unknown or malformed command"])
+    ; fail
     ).
 
 parse_with_specs([Spec|_], Tokens, Command) :-
@@ -71,16 +70,31 @@ token(Token) -->
     "\"",
     { string_codes(Token, Codes) }.
 token(Token) -->
-    "[",
-    string_without("]", Inner),
-    "]",
-    {
-        string_codes(InnerText, Inner),
-        format(string(Token), "[~w]", [InnerText])
-    }.
+    balanced_bracket_token(Codes),
+    { string_codes(Token, Codes) }.
 token(Token) -->
     string_without(" \t\n", Codes),
     { Codes \= [], string_codes(Token, Codes) }.
+
+balanced_bracket_token([0'[|Rest]) -->
+    "[",
+    balanced_bracket_token_rest(1, Rest).
+
+balanced_bracket_token_rest(Depth, [Char|Rest]) -->
+    [Char],
+    {
+        ( Char = 0'[ ->
+            NextDepth is Depth + 1
+        ; Char = 0'] ->
+            NextDepth is Depth - 1
+        ; NextDepth = Depth
+        ),
+        NextDepth >= 0
+    },
+    (   { NextDepth =:= 0 } ->
+        { Rest = [] }
+    ;   balanced_bracket_token_rest(NextDepth, Rest)
+    ).
 
 ws --> [C], { code_type(C, space) }, !, ws.
 ws --> [].
