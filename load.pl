@@ -341,25 +341,42 @@ scan_predicate_dependencies(File, Graph, Recommendations) :-
 
 
 read_source_terms(File, Terms) :-
+    file_directory_name(File, Dir),
     setup_call_cleanup(
         open(File, read, Stream, [encoding(utf8)]),
-        read_terms(Stream, Terms),
+        read_terms_from_stream(Stream, Dir, Terms),
         close(Stream)
     ).
 
-read_terms(Stream, Terms) :-
-    read_term(
-        Stream,
-        Term,
-        [
-            syntax_errors(dec10),
-            comments(_Comments)
-        ]
+read_terms_from_stream(Stream, Dir, Terms) :-
+    catch(
+        read_term(Stream, Term, [syntax_errors(dec10), comments(_)]),
+        _Error,
+        Term = '$syntax_error'
     ),
     (   Term == end_of_file
     ->  Terms = []
-    ;   Terms = [Term|Rest],
-        read_terms(Stream, Rest)
+    ;   Term == '$syntax_error'
+    ->  read_terms_from_stream(Stream, Dir, Terms)
+    ;   expand_source_term(Term, Dir, Expanded),
+        read_terms_from_stream(Stream, Dir, Rest),
+        append(Expanded, Rest, Terms)
+    ).
+
+expand_source_term((:- include(IncludePath0)), Dir, Terms) :- !,
+    resolve_source_include(IncludePath0, Dir, IncludePath),
+    (   exists_file(IncludePath)
+    ->  read_source_terms(IncludePath, Terms)
+    ;   Terms = []
+    ).
+expand_source_term((:- op(Priority, Type, Op)), _, []) :- !,
+    catch(op(Priority, Type, Op), _, true).
+expand_source_term(Term, _, [Term]).
+
+resolve_source_include(Path0, Dir, Path) :-
+    (   is_absolute_file_name(Path0)
+    ->  Path = Path0
+    ;   atomic_list_concat([Dir, '/', Path0], Path)
     ).
 
 
