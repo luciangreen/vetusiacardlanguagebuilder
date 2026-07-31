@@ -29,7 +29,11 @@ handle_input(_, State, "", State, true) :- !.
 handle_input(_, State, "quit", State, false) :- !.
 handle_input(Language, State0, Input, State, true) :-
     ( parse_language_command(Language, Input, Parsed) ->
-        catch(execute_parsed(Language, State0, Parsed, State),_,fail)
+        ( catch(execute_parsed(Language, State0, Parsed, State), Error, (format('Execution error: ~w~n', [Error]), fail)) ->
+            true
+        ; format('Cannot execute: command failed.~n', []),
+          State = State0
+        )
     ; format('Parse error: ~w~n', [Input]),
       State = State0
     ).
