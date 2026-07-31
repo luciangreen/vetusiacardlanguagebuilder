@@ -112,8 +112,8 @@ find_github_folder(FolderAtom, _) :-
     fail.
 
 % Define base paths
-get_github_base_path('Dropbox/GitHub/').
-get_github_base_path('Dropbox/GitHub-private/').
+get_github_base_path('/Users/lg3/Dropbox/GitHub/').
+get_github_base_path('/Users/lg3/Dropbox/GitHub-private/').
 
 % Track search counts dynamically
 log_query(FolderAtom) :-
@@ -233,27 +233,30 @@ process_pl(File) :-
     must_be(atom, File),
 
     program_name_from_file(File, ProgramName),
-
+%trace,
     scan_predicate_dependencies(
         File,
-        DependencyGraph,
+        _DependencyGraph,
         RecommendedPredicates
     ),
 
-    print_dependency_report(
+    /*print_dependency_report(
         DependencyGraph,
         RecommendedPredicates
-    ),
+    ),*/
 
-    select_program_predicate(
-        RecommendedPredicates,
-        PredicateIndicator
-    ),
+    %select_program_predicate(
+    %    RecommendedPredicates,
+    %    PredicateIndicator
+    %),
+    
+        print_options(RecommendedPredicates, 1),
+        read_selection(RecommendedPredicates, PredicateIndicator),
 
     predicate_language_goal(
         PredicateIndicator,
-        Input,
-        Output,
+        _Input,
+        _Output,
         LanguageGoal
     ),
 
@@ -267,13 +270,13 @@ process_pl(File) :-
         LanguageGoal,
         [
             chat(true),
-            description("Processes selected GitHub README file"),
-            source_file(File),
+            description(ProgramName)
+            /*source_file(File),
             source_predicate(PredicateIndicator),
             dependency_graph(DependencyGraph),
             recommended_predicates(RecommendedPredicates),
             input(Input),
-            output(Output)
+            output(Output)*/
         ]
     ),
 
@@ -644,8 +647,9 @@ rank_predicates(Graph, Recommendations) :-
     ),
     keysort(ScoredPredicates0, Ascending),
     reverse(Ascending, Descending),
-    take_first(10, Descending, TopPairs),
-    pairs_values(TopPairs, Recommendations).
+    %take_first(10, Descending, TopPairs),
+    pairs_values(Descending%TopPairs
+    , Recommendations).
 
 
 take_first(0, _, []) :-
