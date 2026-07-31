@@ -203,51 +203,8 @@ read_selection(Files, SelectedFile) :-
         read_selection(Files, SelectedFile)
     ).
 
-% 4. Language Engine generation setup
-process_pl(File) :-
-
-    predicate_dependency_scan(File, RecommendedPredicates),
-
-    select_top_predicate(RecommendedPredicates, PredicateName/Arity),
-
-    program_name_from_file(File, ProgramName),
-
-    make_predicate_call(PredicateName, Arity, I, O, PredicateCall),
-
-    call(PredicateCall),
-
-    algorithm_language(
-
-        ProgramName,
-
-        PredicateCall,
-
-        [
-
-            chat(true),
-
-            description("Processes selected GitHub README file")
-
-        ]
-
-    ),
-
-    language_repl(ProgramName).
-    
 prepare_pl_analysis(FilePath, Output) :-
     Output = FilePath.
-
-
-
-
-:- module(process_pl, [
-    process_pl/1,
-    scan_predicate_dependencies/3
-]).
-
-:- use_module(library(lists)).
-:- use_module(library(pairs)).
-:- use_module(library(readutil)).
 
 
 /*
