@@ -79,8 +79,10 @@ load_vclb(FolderPath) :-
     ;   format('Warning: ~w missing. Generating default config...~n', [VclbPath]),
         generate_default_vclb(VclbPath)
     ),
-    % Trigger the scan inside the verified folder
-    scan_and_load(FolderPath).
+    (   maybe_reload_from_config(FolderPath, VclbPath)
+    ->  true
+    ;   scan_and_load(FolderPath, VclbPath)
+    ).
 
 
 % Safely creates a fresh config.vclb file with initial contents
@@ -95,6 +97,67 @@ generate_default_vclb(VclbPath) :-
         ),
         Error,
         format('Error: Could not generate file. Reason: ~w~n', [Error])
+    ).
+
+
+maybe_reload_from_config(FolderPath, VclbPath) :-
+    load_remembered_selection(VclbPath, File, PredicateIndicator),
+    atomic_list_concat([FolderPath, '/'], FolderPrefix),
+    sub_atom(File, 0, _, _, FolderPrefix),
+    exists_file(File),
+    format(
+        'Reloading remembered selection: ~w with ~q~n',
+        [File, PredicateIndicator]
+    ),
+    process_pl_with_predicate(File, PredicateIndicator).
+
+
+load_remembered_selection(VclbPath, File, PredicateIndicator) :-
+    read_config_terms(VclbPath, Terms),
+    member(source_file(File), Terms),
+    member(source_predicate(PredicateIndicator), Terms).
+
+
+remember_selection(VclbPath, File, PredicateIndicator) :-
+    read_config_terms(VclbPath, Terms0),
+    exclude(is_source_file_term, Terms0, Terms1),
+    exclude(is_source_predicate_term, Terms1, Terms2),
+    append(
+        Terms2,
+        [source_file(File), source_predicate(PredicateIndicator)],
+        Terms
+    ),
+    write_config_terms(VclbPath, Terms).
+
+
+is_source_file_term(source_file(_)).
+
+
+is_source_predicate_term(source_predicate(_)).
+
+
+read_config_terms(VclbPath, Terms) :-
+    setup_call_cleanup(
+        open(VclbPath, read, Stream, [encoding(utf8)]),
+        read_terms_from_stream(Stream, Terms),
+        close(Stream)
+    ).
+
+
+read_terms_from_stream(Stream, Terms) :-
+    read_term(Stream, Term, []),
+    (   Term == end_of_file
+    ->  Terms = []
+    ;   Terms = [Term|Rest],
+        read_terms_from_stream(Stream, Rest)
+    ).
+
+
+write_config_terms(VclbPath, Terms) :-
+    setup_call_cleanup(
+        open(VclbPath, write, Stream, [encoding(utf8)]),
+        forall(member(Term, Terms), portray_clause(Stream, Term)),
+        close(Stream)
     ).
 
 % =========================================================================
@@ -167,7 +230,7 @@ extract_folder_names([_|Paths], BasePath, Folders) :-
 
 
 % Main entry point to scan and select a file
-scan_and_load(FolderPath) :-
+scan_and_load(FolderPath, VclbPath) :-
     % Dynamically build a search pattern matching files inside the chosen FolderPath
     % e.g., "FolderPath/*/*README*"
     atomic_list_concat([FolderPath, '/*/*.pl'], Pattern),
@@ -183,7 +246,8 @@ scan_and_load(FolderPath) :-
     ->  format('No *.pl files found inside: ~w~n', [FolderPath])
     ;   print_options(ValidFiles, 1),
         read_selection(ValidFiles, SelectedFile),
-        process_pl(SelectedFile)
+        process_pl_interactive(SelectedFile, PredicateIndicator),
+        remember_selection(VclbPath, SelectedFile, PredicateIndicator)
     ).
 
 % 3. Menu and choice matching UI
@@ -230,10 +294,13 @@ The predicate:
 */
 
 process_pl(File) :-
+    process_pl_interactive(File, _).
+
+
+process_pl_interactive(File, PredicateIndicator) :-
     must_be(atom, File),
 
     program_name_from_file(File, ProgramName),
-%trace,
     scan_predicate_dependencies(
         File,
         _DependencyGraph,
@@ -250,8 +317,33 @@ process_pl(File) :-
     %    PredicateIndicator
     %),
     
-        print_options(RecommendedPredicates, 1),
-        read_selection(RecommendedPredicates, PredicateIndicator),
+    print_options(RecommendedPredicates, 1),
+    read_selection(RecommendedPredicates, PredicateIndicator),
+    process_pl_with_context(
+        ProgramName,
+        RecommendedPredicates,
+        PredicateIndicator
+    ).
+
+
+process_pl_with_predicate(File, PredicateIndicator) :-
+    must_be(atom, File),
+    must_be(nonvar, PredicateIndicator),
+    program_name_from_file(File, ProgramName),
+    scan_predicate_dependencies(
+        File,
+        _DependencyGraph,
+        RecommendedPredicates
+    ),
+    process_pl_with_context(
+        ProgramName,
+        RecommendedPredicates,
+        PredicateIndicator
+    ).
+
+
+process_pl_with_context(ProgramName, RecommendedPredicates, PredicateIndicator) :-
+    memberchk(PredicateIndicator, RecommendedPredicates),
 
     predicate_language_goal(
         PredicateIndicator,
