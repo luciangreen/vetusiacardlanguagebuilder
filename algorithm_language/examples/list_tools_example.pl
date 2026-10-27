@@ -13,7 +13,7 @@ at_least(Minimum, Value) :-
 run_example :-
     algorithm_language(
         list_tools,
-        prepare_numbers(Input, Minimum, Output),
+        prepare_numbers(_, _, _),
         [chat(true), description("List tools example")]
     ),
     initial_language_state(State0),

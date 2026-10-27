@@ -5,9 +5,9 @@ Automatically generates a command-line language and interactive chat interface f
 ## Features
 
 - **Language generation** — analyses a Prolog predicate and builds a structured command model from its arguments
-- **Parser & runtime** — generates `parser.pl` and `runtime.pl` that handle command parsing, validation, and execution
+- **Parser & runtime** — parses, validates, and executes commands in the running Prolog process; generated `parser.pl` and `runtime.pl` files are currently summaries, not standalone implementations
 - **Documentation** — produces `docs.md` and `examples.md` describing every generated command
-- **Test scaffolding** — generates `tests.pl` with skeletons for each command
+- **Test scaffolding** — generates a minimal PlUnit smoke-test file; the maintained behavioral suite is `algorithm_language/tests/tests.pl`
 - **REPL** — an interactive Read-Eval-Print loop (`language_repl/1`) ready to use immediately
 - **Chat interface** — translates natural-language text to generated commands via `preview`, `explain`, and `run` modes
 - **Artifact save/load** — persist a generated language to disk and reload it later
@@ -15,6 +15,24 @@ Automatically generates a command-line language and interactive chat interface f
 ## Requirements
 
 - [SWI-Prolog](https://www.swi-prolog.org/) 8.x or later
+
+## Run the test suite
+
+From the repository root, run the PlUnit suite with:
+
+```bash
+swipl -q -s algorithm_language/tests/tests.pl -g run_tests -t halt
+```
+
+Run the bundled example with:
+
+```bash
+swipl -q -s algorithm_language/examples/list_tools_example.pl \
+  -g list_tools_example:run_example -t halt
+```
+
+The generation test writes into a temporary directory and removes it afterward.
+The test suite does not overwrite the checked-in generated examples.
 
 ## Quick start
 
@@ -48,10 +66,10 @@ Once the REPL is running, you interact with the generated command language:
 
 ```
 list_tools> load numbers [8,2,5,1]
-result(ok, input_set(numbers,[8,2,5,1]))
+result(ok,"Input loaded.")
 
 list_tools> set minimum 3
-result(ok, input_set(minimum,3))
+result(ok,"Minimum set.")
 
 list_tools> prepare numbers
 result(ok,[5,8])
@@ -82,7 +100,7 @@ list_tools> history
 ...
 
 list_tools> clear
-result(ok,cleared)
+result(ok,"Runtime cleared.")
 
 list_tools> quit
 ```
@@ -92,25 +110,29 @@ list_tools> quit
 The chat commands let you drive the algorithm with plain English:
 
 ```
-list_tools> chat preview "sort 8 2 5 1 minimum 3"
-set_input(numbers,[8,2,5,1])
-set_input(minimum,3)
+list_tools> chat preview "sort 8 2 5 1 but remove numbers below 3"
+load numbers [8,2,5,1]
+set minimum 3
 run_algorithm
 show_result
 
-list_tools> chat explain "sort 8 2 5 1 minimum 3"
+list_tools> chat explain "sort 8 2 5 1 but remove numbers below 3"
 Translated commands:
-set_input(numbers,[8,2,5,1])
-set_input(minimum,3)
+load numbers [8,2,5,1]
+set minimum 3
 run_algorithm
 show_result
 
-list_tools> chat run "sort 8 2 5 1 minimum 3"
-result(ok,input_set(numbers,[8,2,5,1]))
-result(ok,input_set(minimum,3))
+list_tools> chat run "sort 8 2 5 1 but remove numbers below 3"
+result(ok,"Input loaded.")
+result(ok,"Minimum set.")
 result(ok,[5,8])
 result(ok,[5,8])
 ```
+
+Chat translation is a deterministic pattern matcher, not a general language
+model: it currently recognizes numbers and a `below N` or `minimum N` threshold.
+`chat run` starts with a fresh state for each request.
 
 ## Programmatic API
 
@@ -171,79 +193,43 @@ Generated files:
 | `docs.md` | Markdown reference for every command |
 | `examples.md` | One-liner examples for every command |
 | `commands.pl` | Machine-readable command syntax list |
-| `parser.pl` | Generated command parser |
-| `runtime.pl` | Generated command runtime |
-| `tests.pl` | Generated test scaffolding |
+| `parser.pl` | Command syntax summary (not an executable parser yet) |
+| `runtime.pl` | Algorithm/interface summary (not an executable runtime yet) |
+| `tests.pl` | Minimal PlUnit smoke-test scaffold |
 | `language.pl` | Serialised language descriptor term |
 
 ## Options
 
 Pass options as the third argument to `algorithm_language/3`:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `description(Text)` | `"Generated language"` | Human-readable description |
-| `chat(Bool)` | `false` | Enable chat translation commands |
-| `generate_docs(Bool)` | `true` | Include documentation commands |
-| `generate_tests(Bool)` | `true` | Generate test scaffolding |
-| `single_file(Bool)` | `false` | Emit a single combined artifact file |
-| `command_style(Style)` | `simple` | Command naming style |
-| `safe_mode(Bool)` | `true` | Reject unrecognised commands |
-| `debug(Bool)` | `false` | Print debug information |
+| Option | Default | Current behavior |
+|--------|---------|------------------|
+| `description(Text)` | `"Generated language"` | Stored in the language analysis; not currently included in generated Markdown |
+| `chat(Bool)` | `false` | Enables/disables generated chat commands |
+| `generate_docs(Bool)` | `true` | Accepted, but does not yet control documentation generation |
+| `generate_tests(Bool)` | `true` | Accepted, but does not yet control test scaffolding generation |
+| `single_file(Bool)` | `false` | Accepted, but combined-file output is not implemented |
+| `command_style(Style)` | `simple` | Accepted, but alternate command styles are not implemented |
+| `safe_mode(Bool)` | `true` | Accepted, but does not currently change validation behavior |
+| `debug(Bool)` | `false` | Accepted, but debug logging is not implemented |
 
-## Running the bundled example
+## Current implementation status
 
-```bash
-cd algorithm_language/examples
-swipl -g "consult(list_tools_example), run_example, halt" -t halt
-```
+The in-process command model, parser, validator, runtime, Markdown command
+reference, chat preview/explain/run flow, REPL, and language save/load APIs are
+implemented. If the selected algorithm fails, execution now returns an explicit
+`algorithm_failed(Name/Arity)` error and preserves the prior state; it does not
+substitute an unrelated built-in operation.
 
-# Mac, Linux and Windows (with Linux commands installed): Prepare to run load
+Remaining implementation work:
 
-* In Terminal settings (Mac), make Bash the default shell:
-
-```
-/bin/bash
-```
-
-* In Terminal, edit the text file `~/.bashrc` using the text editor Nano:
-
-```
-nano ~/.bashrc
-```
-
-* Add the following to the file `~/.bashrc`:
-
-```
-export PATH="$PATH:/opt/homebrew/bin:/Users/username"
-```
-* or location of load.sh
-
-* Check if `usr/local/bin` exists
-
-```
-ls -ld /usr/local/bin
-```
-
-* Create the directory if missing
-
-```
-sudo mkdir -p /usr/local/bin
-```
-
-* Link to load in Terminal
-
-```
-sudo ln -sf /Users/username/load.sh /usr/local/bin/load
-```
-
-# Caveats
-* Copy load.sh to the location to run it `cp load.sh /Users/username/load.sh`
-* Make load.sh executable `chmod +x /Users/username/load.sh`
-* Make bash the default shell `chsh -s /bin/bash`
-* Run load `load`
-* Modify load.sh and load.pl with correct paths.
-* VCLB only works with lists, so it should be modified before being used as a launcher.
+- Generate executable standalone parser/runtime artifacts rather than summaries.
+- Make `generate_docs/1`, `generate_tests/1`, `single_file/1`,
+  `command_style/1`, `safe_mode/1`, and `debug/1` options effective.
+- Expand the generated test scaffold into tests of command parsing and execution.
+- Broaden algorithm analysis beyond argument-count heuristics (for example,
+  source comments, modes, types, called predicates, and determinism).
+- Extend chat translation beyond the current number-list/minimum patterns.
 
 ## License
 

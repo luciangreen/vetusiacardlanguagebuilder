@@ -17,6 +17,9 @@ execute_language_command(_Language, State0, set_input(Name, Value), State, resul
 execute_language_command(Language, State0, run_algorithm, State, result(ok, ResultValue)) :-
     run_algorithm(Language, State0, State1, ResultValue),
     state_append_history(State1, run_algorithm, State).
+execute_language_command(Language, State0, run_algorithm, State0,
+                         result(error, algorithm_failed(AlgorithmIndicator))) :-
+    algorithm_indicator(Language, AlgorithmIndicator).
 execute_language_command(_, State0, show_result, State, result(ok, ResultValue)) :-
     ( state_get_result(State0, output, ResultValue) ->
         true
@@ -41,17 +44,21 @@ execute_language_command(Language, State0, run_arg(Name, Value), State, result(o
     state_set_input(State0, Name, Value, State1),
     run_algorithm(Language, State1, State2, ResultValue),
     state_append_history(State2, run_arg(Name, Value), State).
+execute_language_command(Language, State0, run_arg(_Name, _Value), State0,
+                         result(error, algorithm_failed(AlgorithmIndicator))) :-
+    algorithm_indicator(Language, AlgorithmIndicator).
 execute_language_command(_, State0, Command, State0, result(error, Message)) :-
     format(atom(Message), 'Unsupported command: ~w', [Command]).
 
 run_algorithm(Language, State0, State, OutputValue) :-
     Algorithm = Language.algorithm,
     Analysis = Language.analysis,
-    ( callable_algorithm(Language, Algorithm, Analysis, State0, OutputValue) ->
-        state_set_result(State0, output, OutputValue, State)
-    ; fallback_algorithm(State0, OutputValue),
-      state_set_result(State0, output, OutputValue, State)
-    ).
+    callable_algorithm(Language, Algorithm, Analysis, State0, OutputValue),
+    state_set_result(State0, output, OutputValue, State).
+
+algorithm_indicator(Language, Predicate/Arity) :-
+    Predicate = Language.analysis.predicate,
+    Arity = Language.analysis.arity.
 
 callable_algorithm(Language, Algorithm, Analysis, State, Output) :-
     copy_term(Algorithm, Goal),
@@ -80,16 +87,3 @@ bind_named_inputs([Name|Rest], Goal, ArgNames, State) :-
 output_arg_value(Goal, OutputName, ArgNames, Output) :-
     nth1(Pos, ArgNames, OutputName),
     arg(Pos, Goal, Output).
-
-fallback_algorithm(State, Output) :-
-    ( state_get_input(State, numbers, Numbers) ->
-        true
-    ; state_get_input(State, input, Numbers)
-    ),
-    ( state_get_setting(State, minimum, Minimum) -> true ; Minimum = -1.0Inf ),
-    include(above_minimum(Minimum), Numbers, Filtered),
-    sort(Filtered, Output).
-
-above_minimum(Minimum, Value) :-
-    number(Value),
-    Value >= Minimum.

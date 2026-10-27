@@ -171,7 +171,7 @@ save_language(LanguageOrName, FilePath) :-
     resolve_language(LanguageOrName, Language),
     setup_call_cleanup(
         open(FilePath, write, Stream),
-        write_term(Stream, Language, [fullstop(true), nl(true)]),
+        write_term(Stream, Language, [quoted(true), fullstop(true), nl(true)]),
         close(Stream)
     ).
 
@@ -269,7 +269,7 @@ generate_language_file(Language, OutputDir) :-
         open(FilePath, write, Stream),
         (
             format(Stream, '%% Generated language descriptor~n', []),
-            write_term(Stream, Language, [fullstop(true), nl(true)])
+            write_term(Stream, Language, [quoted(true), fullstop(true), nl(true)])
         ),
         close(Stream)
     ).
