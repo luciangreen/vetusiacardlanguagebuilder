@@ -56,7 +56,7 @@ algorithm_language(LanguageName, Algorithm, Options) :-
     strip_module(Algorithm, Module, PlainAlgorithm),
     normalize_options(Options, NormalizedOptions),
     resolve_algorithm(Module, PlainAlgorithm, NormalizedOptions, ResolvedAlgorithm),
-    algorithm_language_analyse:analyse_algorithm(ResolvedAlgorithm, NormalizedOptions, Analysis),
+    algorithm_language_analyse:analyse_algorithm(ResolvedAlgorithm, [source_module(Module)|NormalizedOptions], Analysis),
     algorithm_language_command_model:build_command_model(Analysis, NormalizedOptions, Commands),
     ( atom(PlainAlgorithm), current_module(PlainAlgorithm) ->
         EffectiveModule = PlainAlgorithm

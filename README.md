@@ -204,6 +204,7 @@ Pass options as the third argument to `algorithm_language/3`:
 
 | Option | Default | Current behavior |
 |--------|---------|------------------|
+| `arg_names(Names)` | from the source | The arguments' names, such as `[low, high, sum]`. Without it, a predicate with three or more arguments is named from the variables in the head of its first clause in its source file (`prepare_numbers(Input, Minimum, Output)` gives `input`, `minimum` and `output`); if that cannot be read, the names are `arg1`, `arg2`, … and `output`. One argument is `arg1`; two are `input` and `output`. |
 | `description(Text)` | `"Generated language"` | Stored in the language analysis; not currently included in generated Markdown |
 | `chat(Bool)` | `false` | Enables/disables generated chat commands |
 | `generate_docs(Bool)` | `true` | Accepted, but does not yet control documentation generation |

@@ -7,7 +7,7 @@ analyse_algorithm(Algorithm, Options, Analysis) :-
     must_be(callable, Algorithm),
     Algorithm =.. [Predicate|Args],
     length(Args, Arity),
-    argument_names(Arity, ArgNames),
+    algorithm_argument_names(Algorithm, Options, ArgNames),
     split_input_output(ArgNames, InputArgs, OutputArg),
     option_description(Options, Description),
     atomic_list_concat(PredicateWords, '_', Predicate),
@@ -25,9 +25,68 @@ analyse_algorithm(Algorithm, Options, Analysis) :-
         description: Description
     }.
 
+%% algorithm_argument_names(+Algorithm, +Options, -Names) is det.
+%
+%  The arguments' names, from (in order): an arg_names(Names) option; the
+%  variable names in the head of the predicate's first clause in its source
+%  file (prepare_numbers(Input, Minimum, Output) gives input, minimum and
+%  output), for three or more arguments; otherwise names from the number of
+%  arguments.  (Before, any
+%  three-argument predicate was given input, minimum and output.)
+algorithm_argument_names(Algorithm, Options, Names) :-
+    functor(Algorithm, _, Arity),
+    (   memberchk(arg_names(Names0), Options), length(Names0, Arity)
+    ->  Names = Names0
+    ;   Arity >= 3,          % one and two arguments keep arg1, and input and output
+        memberchk(source_module(M), Options),
+        catch(source_argument_names(M, Algorithm, Names1), _, fail)
+    ->  Names = Names1
+    ;   argument_names(Arity, Names)
+    ).
+
+source_argument_names(M, Algorithm, Names) :-
+    functor(Algorithm, F, A),
+    functor(Head0, F, A),
+    once(clause(M:Head0, _, Ref)),
+    clause_property(Ref, file(File)),
+    clause_property(Ref, line_count(Line)),
+    head_names_at(File, Line, F, A, Names).
+
+%% head_names_at(+File, +Line, +Name, +Arity, -Names) is semidet.
+%  Reads the clause starting at Line of File and names each head argument
+%  from its variable: Input becomes input, _Input becomes input. Fails if an
+%  argument is not a variable or two names are the same.
+head_names_at(File, Line, F, A, Names) :-
+    setup_call_cleanup(
+        open(File, read, S),
+        ( skip_lines(S, Line), read_term(S, T, [variable_names(VN)]) ),
+        close(S)),
+    ( T = (Head :- _) -> true ; Head = T ),
+    functor(Head, F, A),
+    Head =.. [_|Args],
+    maplist(variable_label(VN), Args, Names),
+    sort(Names, Unique), length(Unique, A).
+
+skip_lines(_, 1) :- !.
+skip_lines(S, N) :- read_line_to_string(S, _), N1 is N - 1, skip_lines(S, N1).
+
+variable_label(VN, Arg, Label) :-
+    var(Arg),
+    member(Name = V, VN), V == Arg, !,
+    atom_codes(Name, Codes0),
+    ( Codes0 = [0'_|Codes] -> true ; Codes = Codes0 ),
+    Codes \== [],
+    atom_codes(Atom, Codes),
+    camel_to_snake(Atom, Label).
+
+camel_to_snake(Atom, Snake) :-
+    atom_chars(Atom, [C0|Cs]),
+    downcase_atom(C0, L0),
+    foldl([C, A0, A1]>>( char_type(C, upper(Lower)) -> append(A0, ['_', Lower], A1) ; append(A0, [C], A1) ), Cs, [L0], Chars),
+    atom_chars(Snake, Chars).
+
 argument_names(1, [arg1]) :- !.
 argument_names(2, [input, output]) :- !.
-argument_names(3, [input, minimum, output]) :- !.
 argument_names(Arity, Names) :-
     findall(Name,
         (
