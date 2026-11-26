@@ -1,7 +1,7 @@
 :- use_module(library(lists)).
 :- use_module(library(filesex)). % For directory and file operations
-:- use_module('/Users/lg3/Dropbox/GitHub/vetusiacardlanguagebuilder/algorithm_language/algorithm_language').
-:- use_module('/Users/lg3/Dropbox/GitHub/vetusiacardlanguagebuilder/algorithm_language/state').
+:- use_module('algorithm_language/algorithm_language').
+:- use_module('algorithm_language/state').
 
 :- dynamic history/2. % Stores query history to track popularity
 
@@ -71,12 +71,22 @@ print_list([H|T]) :-
     format('  - ~w~n', [H]),
     print_list(T).
 
-% 1. Core entry predicate that checks config and runs the targeted scan
+% 1. Core entry predicate that checks config and runs the targeted scan.
+%
+% The configuration for a loaded folder is kept in the user's own config
+% folder (see vclb_config_path/2), not in the loaded folder itself, so that
+% loading a repository does not add a file to it. A config.vclb left in a
+% folder by an earlier version is read once and copied there; the old file
+% is left as it is, for you to delete.
 load_vclb(FolderPath) :-
-    atom_concat(FolderPath, '/config.vclb', VclbPath),
+    vclb_config_path(FolderPath, VclbPath),
     (   exists_file(VclbPath)
     ->  format('Success: Loaded configuration from ~w~n', [VclbPath])
-    ;   format('Warning: ~w missing. Generating default config...~n', [VclbPath]),
+    ;   legacy_vclb_path(FolderPath, LegacyPath),
+        exists_file(LegacyPath)
+    ->  copy_legacy_vclb(LegacyPath, VclbPath)
+    ;   format('No configuration for ~w yet. Generating default config...~n',
+               [FolderPath]),
         generate_default_vclb(VclbPath)
     ),
     (   maybe_reload_from_config(FolderPath, VclbPath)
@@ -85,7 +95,59 @@ load_vclb(FolderPath) :-
     ).
 
 
-% Safely creates a fresh config.vclb file with initial contents
+%% vclb_config_dir(-Dir)
+%  vclb_config_dir_override/1 if asserted (for tests or embedding), else
+%  $VCLB_CONFIG_DIR, else $XDG_CONFIG_HOME/vclb, else ~/.config/vclb.
+:- dynamic vclb_config_dir_override/1.
+vclb_config_dir(Dir) :-
+    (   vclb_config_dir_override(Dir0)
+    ->  Dir = Dir0
+    ;   getenv('VCLB_CONFIG_DIR', Dir0), Dir0 \== ''
+    ->  Dir = Dir0
+    ;   getenv('XDG_CONFIG_HOME', Base), Base \== ''
+    ->  atomic_list_concat([Base, '/vclb'], Dir)
+    ;   expand_file_name('~', [Home|_]),
+        atomic_list_concat([Home, '/.config/vclb'], Dir)
+    ).
+
+%% vclb_config_path(+FolderPath, -VclbPath)
+%  One file per loaded folder, named from the folder's full path so that
+%  folders with the same name in different places do not share a file.
+vclb_config_path(FolderPath, VclbPath) :-
+    vclb_config_dir(Dir),
+    make_directory_path(Dir),
+    vclb_config_file_name(FolderPath, Name),
+    atomic_list_concat([Dir, '/', Name], VclbPath).
+
+vclb_config_file_name(FolderPath, Name) :-
+    atom_codes(FolderPath, Codes0),
+    strip_trailing_slashes(Codes0, Codes1),
+    maplist(config_name_code, Codes1, Codes2),
+    atom_codes(Base, Codes2),
+    atom_concat(Base, '.vclb', Name).
+
+strip_trailing_slashes(Codes0, Codes) :-
+    (   append(Codes1, [0'/], Codes0), Codes1 \== []
+    ->  strip_trailing_slashes(Codes1, Codes)
+    ;   Codes = Codes0
+    ).
+
+config_name_code(C, C) :- code_type(C, alnum), !.
+config_name_code(0'-, 0'-) :- !.
+config_name_code(0'., 0'.) :- !.
+config_name_code(_, 0'_).
+
+legacy_vclb_path(FolderPath, LegacyPath) :-
+    atom_concat(FolderPath, '/config.vclb', LegacyPath).
+
+copy_legacy_vclb(LegacyPath, VclbPath) :-
+    read_config_terms(LegacyPath, Terms),
+    write_config_terms(VclbPath, Terms),
+    format('Copied ~w to ~w. The old file is no longer used and can be deleted.~n',
+           [LegacyPath, VclbPath]).
+
+
+% Safely creates a fresh config file with initial contents
 generate_default_vclb(VclbPath) :-
     catch(
         (   open(VclbPath, write, Stream),
@@ -174,7 +236,12 @@ find_github_folder(FolderAtom, _) :-
     format('Error: Folder "~w" not found in active Dropbox/GitHub paths.~n', [FolderAtom]),
     fail.
 
-% Define base paths
+% Define base paths. Set VCLB_GITHUB_PATHS to a colon-separated list of
+% folders (each ending in /) to search other places.
+get_github_base_path(Path) :-
+    getenv('VCLB_GITHUB_PATHS', Paths), Paths \== '', !,
+    atomic_list_concat(List, ':', Paths),
+    member(Path, List), Path \== ''.
 get_github_base_path('/Users/lg3/Dropbox/GitHub/').
 get_github_base_path('/Users/lg3/Dropbox/GitHub-private/').
 

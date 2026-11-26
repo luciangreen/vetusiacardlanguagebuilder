@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
+# Starts the VCLB folder loader REPL. Works from any directory.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Exit immediately if the Prolog file is missing
-if [ ! -f "Dropbox/GitHub/vetusiacardlanguagebuilder/load.pl" ]; then
-    echo "Error: load.pl not found in the current directory." >&2
+if [ ! -f "$DIR/load.pl" ]; then
+    echo "Error: load.pl not found in $DIR." >&2
     exit 1
 fi
 
-# Launch SWI-Prolog, load the file, and execute the entry predicate
-swipl -q -s Dropbox/GitHub/vetusiacardlanguagebuilder/load.pl -g language_repl
+swipl -q -s "$DIR/load.pl" -g language_repl

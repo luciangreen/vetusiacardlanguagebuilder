@@ -34,6 +34,20 @@ swipl -q -s algorithm_language/examples/list_tools_example.pl \
 The generation test writes into a temporary directory and removes it afterward.
 The test suite does not overwrite the checked-in generated examples.
 
+## Folder loader (load.pl)
+
+`./load.sh` starts a REPL that loads a repository by name (`load <folder>`)
+and remembers the file and predicate you chose. That memory is kept in your
+own config folder, one file per repository: `$VCLB_CONFIG_DIR`, or
+`$XDG_CONFIG_HOME/vclb`, or `~/.config/vclb`. Earlier versions wrote
+`config.vclb` into each loaded repository, where it could be committed by
+mistake; if one is found it is copied to the config folder once and then no
+longer used, so it can be deleted. Set `VCLB_GITHUB_PATHS` (folders
+separated by `:`, each ending in `/`) to search folders other than
+`~/Dropbox/GitHub/` and `~/Dropbox/GitHub-private/`.
+
+Tests: `swipl -q -s tests/test_load_config.pl -g run_tests -t halt`
+
 ## Quick start
 
 Define your algorithm, generate a language, and start the REPL — all in three steps:
